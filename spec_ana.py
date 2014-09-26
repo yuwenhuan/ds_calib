@@ -44,23 +44,23 @@ def ds_hann(n):
     x = np.arange(n, dtype='float_')
     return .5*(1 - np.cos(2*np.pi*x/n))
 
-def myfft(v,fs,signal_bin_num,OSR,plot,ylow,des):
-    print v
+def fft(v,fs,signal_bin_num,OSR,plot,ylow,des):
     N = v.size
     w = ds_hann(N)
 
-    nb = 3;
+    #nb = 3;
     w1 = np.linalg.norm(w,1)
-    w2 = np.linalg.norm(w,2)
-    NBW = (w2/w1)^2
-    V = np.fft(w*v)/(w1/2)
+    #w2 = np.linalg.norm(w,2)
+    #NBW = np.square((w2/w1))
+    V = np.fft.fft(w*v)/(w1/2)
     
     # integrated noise
-    for ii in range(length(V)):
+    intV = np.zeros(V.size)
+    for ii in range(V.size):
         if ii < 2: # dc signal
-            intV[ii] = 0
-        elif ((ii -1 > signal_bin_num + 1) or (ii -1 < signal_bin_num - 1)): # not signal bin
-            intV[ii] = np.sqrt(np.abs(intV[ii-1])^2 + np.abs(V[ii])^2)
+            intV[ii] = 1e-9
+        elif ((ii  > signal_bin_num + 1) or (ii  < signal_bin_num - 1)): # not signal bin
+            intV[ii] = np.sqrt(np.square(np.abs(intV[ii-1])) + np.square(np.abs(V[ii])))
         else:
             intV[ii] = intV[ii-1]
 
@@ -72,17 +72,49 @@ def myfft(v,fs,signal_bin_num,OSR,plot,ylow,des):
         
         # plot frequency domain output
         plt.figure(2)
-        plt.semilogx(f,20*np.log10(np.abs(V[1:N/2])),'LineWidth',2)
+        p1, = plt.semilogx(f,20*np.log10(np.abs(V[1:N/2])))
         plt.hold(True);
-        plt.semilogx(f,20*log10(abs(intV[1:N/2])),'r--','LineWidth',2)
+        p2, = plt.semilogx(f,20*np.log10(abs(intV[1:N/2])))
         # plot OSR limit
-        plt.semilogx( [fs/2/OSR,fs/2/OSR],[0,ylow],'k','LineWidth',2)
+        plt.semilogx( [fs/2/OSR,fs/2/OSR],[0,ylow])
         plt.xlabel('Frequency (Hz)')
         plt.ylabel('Magnitude (dBFS)')
         plt.axis([0,fs/2,ylow,0])
         plt.title(des)
-        plt.legend('Output spectrum','Integrated noise')
+        plt.legend([p1,p2],['Output spectrum','Integrated noise'])
         plt.grid(True)
+        plt.show()
 
     #[snr,sndr,hd2,hd3] =mysnr(V,signal_bin_num,OSR)
     return V
+
+
+def snr(V,signal_bin_num,OSR):
+    """
+    function to calculate SNR
+
+    Input:
+    V: fft spectrum
+    signal_bin_num: the fft bin number for signal (starts from 0 for DC)
+    OSR: oversampling ratio
+    
+    Output:
+    snr
+    sndr
+    hd2
+    hd3
+    """
+    N = V.length
+    nb = 3
+    signal_bins = np.arange(signal_bin_num - (nb-1)/2,signal_bin_num + (nb-1)/2)
+    inband_bins = np.arange(2,N/(2*OSR),1)
+    noise_bins = setdiff1d(inband_bins,signal_bins);
+    harmonic_bins = [];
+    for ii = 2:50
+        harmonic_bins = [harmonic_bins , signal_bin_num * ii + [-(nb-1)/2:(nb-1)/2]];
+    end
+    noise_no_distortion_bins = setdiff(noise_bins,harmonic_bins);
+    snr = 10*log10(sum(abs(V(signal_bins+1)).^2)/sum(abs(V(noise_no_distortion_bins+1)).^2));
+    sndr = 10*log10(sum(abs(V(signal_bins+1)).^2)/sum(abs(V(noise_bins+1)).^2));
+    hd2 = 10*log10(sum(abs(V(2*signal_bins+1)).^2)/sum(abs(V(signal_bins+1)).^2));
+    hd3 = 10*log10(sum(abs(V(3*signal_bins+1)).^2)/sum(abs(V(signal_bins+1)).^2));
