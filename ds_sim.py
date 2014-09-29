@@ -3,8 +3,8 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import spec_ana as sa
 
+import spec_ana as sa
 import ds
 
 length = 8192*2
@@ -18,7 +18,7 @@ c = [1,1]
 g = [0]
 q_bit = 2
 q_type = 0
-dwa = 1
+dwa = 0
 dac_mismatch = np.array([0.45,-0.55,0.95,-0.85])
 
 fs = 1e6

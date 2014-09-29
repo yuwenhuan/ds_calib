@@ -26,16 +26,14 @@ def quantize(x, n,type=0):
         q = q_max
     elif q < q_min:
         q = q_min
-    
+
+  
     if type == 0:
-        q_int = (q+1)*np.power(2,n-1)
+        q_int = int((q+1)*np.power(2,n-1))
     else:
-        q_int = (q+1-1/(np.power(2,n)))*np.power(2,n-1)
+        q_int = int((q+1-1/(np.power(2,n)))*np.power(2,n-1))
 
-    q_int = q_int.astype(np.int64)
     return (q, q_int)
-
-
 
 
 def sim_cifb_2(u_list,a,b,c,g,q_bit,q_type,dwa,dac_mismatch):
@@ -77,7 +75,7 @@ def sim_cifb_2(u_list,a,b,c,g,q_bit,q_type,dwa,dac_mismatch):
         u = u_list[n]
         
         q_input = b[2]*u + c[1]*i_current[1]
-        q,qint = quantize(q_input,2,0)
+        q,qint = quantize(q_input,q_bit,q_type)
         v_list.append(q)
         
         # DAC
@@ -86,13 +84,13 @@ def sim_cifb_2(u_list,a,b,c,g,q_bit,q_type,dwa,dac_mismatch):
         else:
             n_dac = np.power(2,q_bit) - 1
         if dwa == 0:
-            dac_used = np.append(np.ones(qint),np.zeros(n_dac-qint))
+            dac_used = np.append(np.ones(qint),-np.ones(n_dac-qint))
         else:
             dac_used = np.zeros(n_dac)
             for ii in range(qint):
                 dac_used[dac_ptr] = 1
                 dac_ptr = (dac_ptr + 1) % n_dac
-        dac_error = 1.0/4*0.01*np.dot(dac_used,dac_mismatch)
+        dac_error = 1.0/n_dac*0.01*np.dot(dac_used,dac_mismatch)
         dac_out = q + dac_error
         
         i_nxt[0] = i_current[0] - a[0]*dac_out + b[0]*u - g[0]*i_current[1]
