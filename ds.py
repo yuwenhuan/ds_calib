@@ -76,7 +76,6 @@ def sim_cifb_2(u_list,a,b,c,g,q_bit,q_type,dwa,dac_mismatch):
         
         q_input = b[2]*u + c[1]*i_current[1]
         q,qint = quantize(q_input,q_bit,q_type)
-        v_list.append(q)
         
         # DAC
         if q_type == 0:
@@ -86,16 +85,34 @@ def sim_cifb_2(u_list,a,b,c,g,q_bit,q_type,dwa,dac_mismatch):
         if dwa == 0:
             dac_used = np.append(np.ones(qint),-np.ones(n_dac-qint))
         else:
-            dac_used = np.zeros(n_dac)
+            dac_used = -np.ones(n_dac)
             for ii in range(qint):
                 dac_used[dac_ptr] = 1
                 dac_ptr = (dac_ptr + 1) % n_dac
         dac_error = 1.0/n_dac*0.01*np.dot(dac_used,dac_mismatch)
-        dac_out = q + dac_error
+        dac_in = np.sum(dac_used)/n_dac
+        dac_out = dac_in + dac_error
+        v_list.append(dac_in)
         
         i_nxt[0] = i_current[0] - a[0]*dac_out + b[0]*u - g[0]*i_current[1]
         i_nxt[1] = i_current[1] - a[1]*dac_out + b[1]*u + c[0]*i_current[0]
         i = np.column_stack((i,i_nxt))
         
+    print dac_used
     return np.array(v_list)
 
+def sum2(v):
+    """
+    do double summing and averaging (decimation for incremental ADC)
+    
+    Input:
+    v: array of deltasigma output
+    
+    Output:
+    d: digital result of averating
+    """
+    N = v.size
+    h = np.append([0],np.ones(N-1))
+    i1 = np.convolve(h,v)[0:N]
+    d = sum(i1)/(0.5*N*(N-1))
+    return d

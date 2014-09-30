@@ -18,7 +18,7 @@ c = [1,1]
 g = [0]
 q_bit = 2
 q_type = 0
-dwa = 0
+dwa = 1
 dac_mismatch = np.array([0.45,-0.55,0.95,-0.85])
 
 fs = 1e6
@@ -29,6 +29,6 @@ ylow = -160
 des = 'Output Spectrum'
 
 v_list = ds.sim_cifb_2(u_list,a,b,c,g,q_bit,q_type,dwa,dac_mismatch)
-#plt.plot(n_list,v_list)
-#plt.show()
+plt.plot(n_list,v_list)
+plt.show()
 V=sa.fft(v_list,fs,signal_bin_num,OSR,plot,ylow,des)
