@@ -67,21 +67,23 @@ def sim_cifb_2(u_list,a,b,c,g,q_bit,q_type,dwa,dac_mismatch):
     v_list = []
     dac_ptr = 0
     
-    i = np.array([[0.0],[0.0]]) # integrator content
+    if q_type == 0:
+        n_dac = np.power(2,q_bit)
+    else:
+        n_dac = np.power(2,q_bit) - 1
+    i = np.zeros([length+1,2])
+    dac_used_list = np.empty([length,n_dac])
+    print i.size
 
     for n in range(length):
         i_nxt = np.array([0.0,0.0])
-        i_current = i[:,n]
+        i_current = i[n,:]
         u = u_list[n]
         
         q_input = b[2]*u + c[1]*i_current[1]
         q,qint = quantize(q_input,q_bit,q_type)
         
-        # DAC
-        if q_type == 0:
-            n_dac = np.power(2,q_bit)
-        else:
-            n_dac = np.power(2,q_bit) - 1
+
         if dwa == 0:
             dac_used = np.append(np.ones(qint),-np.ones(n_dac-qint))
         else:
@@ -93,13 +95,13 @@ def sim_cifb_2(u_list,a,b,c,g,q_bit,q_type,dwa,dac_mismatch):
         dac_in = np.sum(dac_used)/n_dac
         dac_out = dac_in + dac_error
         v_list.append(dac_in)
+        dac_used_list[n,:] = dac_used
         
         i_nxt[0] = i_current[0] - a[0]*dac_out + b[0]*u - g[0]*i_current[1]
         i_nxt[1] = i_current[1] - a[1]*dac_out + b[1]*u + c[0]*i_current[0]
-        i = np.column_stack((i,i_nxt))
+        i[n+1,:] = i_nxt
         
-    print dac_used
-    return np.array(v_list)
+    return (np.array(v_list),dac_used_list)
 
 def sum2(v):
     """
